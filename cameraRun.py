@@ -13,7 +13,6 @@ def wait_button() :
     os.system("sudo shutdown now")
     exit(1)
 
-
 def blink_led() :
 	led = LED(4)
 	while True:
@@ -24,24 +23,30 @@ def blink_led() :
 
 INTERVAL = 30
 camera = PiCamera(framerate=20,resolution=(1280,720))
-camera.start_preview()
 print("Recording")
-camera.start_recording("videos/"+datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"-1.h264", sei=True)
+
 Thread(target=blink_led, daemon=True).start()
 Thread(target=wait_button, daemon=True).start()
-camera.stop_preview()
-
-camera.wait_recording(INTERVAL)
 
 counter = 1
 try:
 	while True:
-		counter += 1
-		camera.split_recording("videos/"+datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"-"+str(counter)+".h264")
-		camera.wait_recording(INTERVAL)
 		
-# Handles the case when user exits the running script using Control+C
-except KeyboardInterrupt:
+		file_name = f"videos/{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}-{str(counter)}"
+
+		if counter == 1 :
+			camera.start_recording(f"{file_name}.h264", sei=True)
+		else :
+			camera.split_recording(f"{file_name}.h264")
+
+		camera.wait_recording(INTERVAL)
+
+		os.rename(f"{file_name}.h264", f"{file_name}.mp4")
+		counter += 1
+		
+# close gracefully
+finally :
 	camera.stop_recording()
+	os.rename(f"{file_name}.h264", f"{file_name}.mp4")
 
 	camera.close()
